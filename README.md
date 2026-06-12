@@ -19,6 +19,24 @@ counting the same page or the same URL twice.
 - Includes a small performance profiler that measures how long methods take and saves that to a
   text file.
 
+## How It Works
+
+The original crawler visited one page at a time, which is slow. The parallel version speeds this
+up by working on many pages at once.
+
+When a crawl starts, each starting URL is handed to a `ForkJoinPool`, which is a pool of threads
+built for tasks that keep creating more tasks. Each page becomes a small task (`CrawlTask`). A task
+does three things: it downloads and parses one page, it adds that page's word counts into a shared
+map, and then it creates a new task for every link it found and runs them too. Those new tasks run
+on other threads, so a lot of pages get processed at the same time. A task stops early if it has
+reached the depth limit, run past the time limit, or hit a URL that was already visited.
+
+Because many threads touch the same data at once, the shared word counts and the set of visited
+URLs use thread-safe collections (`ConcurrentHashMap` and a concurrent set). The visited set is the
+key to correctness: when a thread tries to add a URL, it only continues if that URL was not already
+there. This single check makes sure no page is ever downloaded or counted twice, even when two
+threads reach the same link at the same moment.
+
 ## Built With
 
 - Java 17
@@ -38,7 +56,7 @@ counting the same page or the same URL twice.
 Clone the repository and move into the project folder:
 
 ```
-git clone <your-repo-url>
+git clone https://github.com/nishit-05/parallel-web-crawler.git
 cd parallel-web-crawler
 ```
 
@@ -99,3 +117,20 @@ different website or change the limits, then run the crawler again to see new re
 - `SequentialWebCrawler.java` - the original one-page-at-a-time crawler.
 - `WordCounts.java` - sorts the word counts and keeps only the most popular ones.
 - `main/` - the entry point that ties everything together.
+
+## Author
+
+**Nishit Dongre**
+
+- GitHub: [@nishit-05](https://github.com/nishit-05)
+
+## Contact
+
+If you have any questions or feedback, feel free to reach out:
+
+- LinkedIn: [Nishit Dongre](https://www.linkedin.com/in/nishitdongre/)
+- Email: nishitdongre@gmail.com
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
